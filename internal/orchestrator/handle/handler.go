@@ -3,12 +3,11 @@ package handle
 import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
-	"main.go/internal/config"
-	"main.go/internal/orchestrator/ParseExpression"
-	"main.go/internal/orchestrator/Storage"
+	"github.com/katenester/Distributed_computing/internal/model"
+	"github.com/katenester/Distributed_computing/internal/orchestrator/ParseExpression"
+	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type Handler interface {
@@ -41,6 +40,7 @@ func (h *handler) Register(router *httprouter.Router) {
 
 // AddExpression - добавление выражения
 func (h *handler) AddExpression(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	log.Println("Сервер: операция добавления выражения")
 	// Создаем анонимную структуру для хранения данных JSON
 	var req struct {
 		Expression string `json:"expression"`
@@ -77,31 +77,30 @@ func (h *handler) AddExpression(w http.ResponseWriter, r *http.Request, params h
 
 // GetListExpressions - Получение списка всех выражений
 func (h *handler) GetListExpressions(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	log.Println("Сервер: получение списка всех выражений")
 	// Получаем ссылку на слайс
-	copyList := storage.GetAllExpression()
-	list := make([]Storage.Expression, len(*copyList), cap(*copyList))
-	// Копируем содержимое для параллельной обработки
-	copy(list, *copyList)
+	list := storage.GetAllExpression()
+	log.Println("Сервер: хранилка", list)
 	// Создаем слайс анонимных структур для хранения данных JSON
 	resp := struct {
 		Expressions []struct {
-			ID     int  `json:"id"`
-			Status bool `json:"status"`
-			Result int  `json:"result"`
+			ID     int     `json:"id"`
+			Status bool    `json:"status"`
+			Result float64 `json:"result"`
 		} `json:"expressions"`
 	}{
 		Expressions: make([]struct {
-			ID     int  `json:"id"`
-			Status bool `json:"status"`
-			Result int  `json:"result"`
+			ID     int     `json:"id"`
+			Status bool    `json:"status"`
+			Result float64 `json:"result"`
 		}, len(list)),
 	}
 	for i, v := range list {
-		result, err := strconv.Atoi(v.Expr)
+		var err error
+		resp.Expressions[i].Result, err = strconv.ParseFloat(v.Expr, 64)
 		resp.Expressions[i].ID = v.Id
 		// true - выражение посчитано, т.е. в стеке осталось одно число по алгоритму обратной польской записи, иначе false
 		resp.Expressions[i].Status = err == nil
-		resp.Expressions[i].Result = result
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(resp)
@@ -114,6 +113,7 @@ func (h *handler) GetListExpressions(w http.ResponseWriter, r *http.Request, par
 
 // GetExpression - Получение выражения по id
 func (h *handler) GetExpression(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	log.Println("Сервер: Получение выражения по id")
 	// Получаем id из пути и конвертируем в int
 	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil {
@@ -122,17 +122,18 @@ func (h *handler) GetExpression(w http.ResponseWriter, r *http.Request, params h
 	}
 	// Получаем выражение по id
 	exp, err := storage.GetExpression(id)
+	log.Println("Сервер: хранилка id", exp)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	res, err := strconv.Atoi(exp.Expr)
+	res, err := strconv.ParseFloat(exp.Expr, 64)
 	// Декодируем в json
 	resp := map[string]struct {
-		ID     int  `json:"id"`
-		Status bool `json:"status"`
-		Result int  `json:"result"`
+		ID     int     `json:"id"`
+		Status bool    `json:"status"`
+		Result float64 `json:"result"`
 	}{
 		"expression": {
 			ID:     exp.Id,
@@ -153,48 +154,19 @@ func (h *handler) GetExpression(w http.ResponseWriter, r *http.Request, params h
 // GiveTask - Передача задачи агенту
 func (h *handler) GiveTask(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Ищем задачу для агента
-	// Пока для проверки работы будем сканировать все задачи
-	// Но нужно будет переделать (например две хранилки - решенные задачи и в процессе)
-	list := *storage.GetAllExpression()
-	// Ищем задачи с приоритетом
-	for _, v := range list {
-		// Если задача не решенная
-		if len(v.Expr) != 1 {
-			// Выбираем таску
-			for _, taskExpression := range v.Tasks {
-				// Если задача не была взята другим агентом (т.е. не запустился таймер)
-				// Либо вышел таймаут
-				if taskExpression.LastAccess.IsZero() || time.Now().After(taskExpression.LastAccess) {
-					// Ставим дедлайн (время операции + издержки)
-					taskExpression.LastAccess = time.Now().Add(time.Duration(config.DEADLINE))
-					// Отправляем задачу агенту
-					// Декодируем в json
-					resp := map[string]struct {
-						ID         int           `json:"id"`
-						Arg1       float64       `json:"arg1"`
-						Arg2       float64       `json:"arg2"`
-						Operation  byte          `json:"operation"`
-						LastAccess time.Duration `json:"operation_time"`
-					}{
-						"task": {
-							ID:         taskExpression.Id,
-							Arg1:       taskExpression.Arg1,
-							Arg2:       taskExpression.Arg2,
-							Operation:  taskExpression.Operation,
-							LastAccess: config.GetDuration(string(taskExpression.Operation)),
-						},
-					}
-					w.Header().Set("Content-Type", "application/json")
-					err := json.NewEncoder(w).Encode(resp)
-					if err != nil {
-						w.WriteHeader(http.StatusInternalServerError)
-						return
-					}
-					w.WriteHeader(http.StatusCreated)
-					return
-				}
-			}
+	if task, isTask := storage.FindTask(); isTask {
+		resp := map[string]model.Task{
+			"task": task,
 		}
+		log.Println("Сервер: Передаю задачу агенту", resp)
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		return
 	}
 	// Задачи нет
 	w.WriteHeader(http.StatusNotFound)
@@ -204,24 +176,19 @@ func (h *handler) GiveTask(w http.ResponseWriter, r *http.Request, params httpro
 func (h *handler) GetResultTask(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Получаем id и result
 	data := struct {
-		id     int
-		result float64
+		Id     int     `json:"id"`
+		Result float64 `json:"result"`
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	// Записываем результат в выражение
-	// Обновляем таски
-	list := *storage.GetAllExpression()
-	// Ищем таску
-	for _, v := range list {
-		// Если задача не решенная и есть нужная таска
-		if len(v.Expr) != 1 && v.FindAndReplace(data.id, data.result) {
-			w.WriteHeader(http.StatusCreated)
-			return
-		}
+	log.Println("Сервер: Получение результата вычисления от агента", data)
+	// Проверяем таску в хранилке , и если такая есть => меняем результат
+	if storage.FindAndReplace(data.Id, data.Result) {
+		w.WriteHeader(http.StatusCreated)
+		return
 	}
 	w.WriteHeader(http.StatusNotFound)
 }

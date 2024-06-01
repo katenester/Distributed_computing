@@ -1,6 +1,6 @@
 package handle
 
-import "main.go/internal/orchestrator/Storage"
+import "github.com/katenester/Distributed_computing/internal/orchestrator/Storage"
 
 var storage *Storage.Storage
 

@@ -1,8 +1,8 @@
 package services
 
 import (
-	"main.go/internal/config"
-	"main.go/internal/model"
+	"github.com/katenester/Distributed_computing/internal/config"
+	"github.com/katenester/Distributed_computing/internal/model"
 	"time"
 )
 

@@ -2,6 +2,8 @@ package Storage
 
 import (
 	"errors"
+	"github.com/katenester/Distributed_computing/internal/config"
+	"github.com/katenester/Distributed_computing/internal/model"
 	"sync"
 	"time"
 )
@@ -36,12 +38,49 @@ func (s *Storage) SaveExpression(expression string) int {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	id := int(time.Now().UnixNano())
-	s.expressions = append(s.expressions, Expression{Id: id, Expr: expression, OriginalExpr: expression})
+	s.expressions = append(s.expressions, Expression{Id: id, Expr: expression, OriginalExpr: expression, Tasks: make([]model.Task, 0), mx: &sync.RWMutex{}})
+	// Генерируем таски для задачи.
+	s.expressions[len(s.expressions)-1].GenerateTask()
 	// Возвращаем последнюю добавленную запись
 	return id
 }
 
 // GetAllExpression - получение списка всех выражений
-func (s *Storage) GetAllExpression() *[]Expression {
-	return &s.expressions
+func (s *Storage) GetAllExpression() []Expression {
+	return s.expressions
+}
+
+// FindAndReplace - делает замены решенных подзадач
+func (s *Storage) FindAndReplace(id int, result float64) bool {
+	for i := 0; i < len(s.expressions); i++ {
+		if s.expressions[i].IsNotSolved() && s.expressions[i].FindAndReplace(id, result) {
+			return true
+		}
+	}
+	return false
+}
+
+// FindTask - ищет задачу для агента
+func (s *Storage) FindTask() (model.Task, bool) {
+	for i := 0; i < len(s.expressions); i++ {
+		// Если задача не решенная
+		if s.expressions[i].IsNotSolved() {
+			// Выбираем таску
+			for j := 0; j < len(s.expressions[i].Tasks); j++ {
+				if s.expressions[i].Tasks[j].LastAccess.IsZero() || time.Now().After(s.expressions[i].Tasks[j].LastAccess) {
+					// Ставим дедлайн (время операции + издержки)
+					s.expressions[i].Tasks[j].LastAccess = time.Now().Add(config.DEADLINE)
+					// Отправляем задачу агенту
+					return model.Task{
+						Id:         s.expressions[i].Tasks[j].Id,
+						Arg1:       s.expressions[i].Tasks[j].Arg1,
+						Arg2:       s.expressions[i].Tasks[j].Arg2,
+						Operation:  s.expressions[i].Tasks[j].Operation,
+						LastAccess: s.expressions[i].Tasks[j].LastAccess,
+					}, true
+				}
+			}
+		}
+	}
+	return model.Task{}, false
 }
