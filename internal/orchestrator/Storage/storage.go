@@ -38,7 +38,7 @@ func (s *Storage) SaveExpression(expression string) int {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	id := int(time.Now().UnixNano())
-	s.expressions = append(s.expressions, Expression{Id: id, Expr: expression, OriginalExpr: expression, Tasks: make([]model.Task, 0), mx: &sync.RWMutex{}})
+	s.expressions = append(s.expressions, Expression{Id: id, Expr: expression, OriginalExpr: expression, Tasks: make([]model.Task, 0), mx: &sync.RWMutex{}, Err: nil})
 	// Генерируем таски для задачи.
 	s.expressions[len(s.expressions)-1].GenerateTask()
 	// Возвращаем последнюю добавленную запись
@@ -51,9 +51,9 @@ func (s *Storage) GetAllExpression() []Expression {
 }
 
 // FindAndReplace - делает замены решенных подзадач
-func (s *Storage) FindAndReplace(id int, result float64) bool {
+func (s *Storage) FindAndReplace(id int, result float64, err error) bool {
 	for i := 0; i < len(s.expressions); i++ {
-		if s.expressions[i].IsNotSolved() && s.expressions[i].FindAndReplace(id, result) {
+		if s.expressions[i].IsNotSolved() && s.expressions[i].FindAndReplace(id, result, err) {
 			return true
 		}
 	}

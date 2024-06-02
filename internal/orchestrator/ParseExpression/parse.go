@@ -27,6 +27,8 @@ func ToPostfix(expression string) (string, error) {
 	var stack []rune
 	var output []string
 	var numberBuffer strings.Builder
+	previousRune := ' ' // Предыдущий обработанный символ
+
 	for i := 0; i < len(expression); {
 		r, size := utf8.DecodeRuneInString(expression[i:])
 		i += size
@@ -54,15 +56,19 @@ func ToPostfix(expression string) (string, error) {
 			}
 			stack = stack[:len(stack)-1]
 		case isOperator(r):
-			if numberBuffer.Len() > 0 {
-				output = append(output, numberBuffer.String())
-				numberBuffer.Reset()
+			if r == '-' && (previousRune == ' ' || previousRune == '(' || isOperator(previousRune)) {
+				numberBuffer.WriteRune(r) // Обработка унарного минуса
+			} else {
+				if numberBuffer.Len() > 0 {
+					output = append(output, numberBuffer.String())
+					numberBuffer.Reset()
+				}
+				for len(stack) > 0 && isOperator(stack[len(stack)-1]) && higherPrecedence(stack[len(stack)-1], r) {
+					output = append(output, string(stack[len(stack)-1]))
+					stack = stack[:len(stack)-1]
+				}
+				stack = append(stack, r)
 			}
-			for len(stack) > 0 && isOperator(stack[len(stack)-1]) && higherPrecedence(stack[len(stack)-1], r) {
-				output = append(output, string(stack[len(stack)-1]))
-				stack = stack[:len(stack)-1]
-			}
-			stack = append(stack, r)
 		case unicode.IsSpace(r):
 			if numberBuffer.Len() > 0 {
 				output = append(output, numberBuffer.String())
@@ -71,6 +77,7 @@ func ToPostfix(expression string) (string, error) {
 		default:
 			return "", fmt.Errorf("невалидные данные: %c", r)
 		}
+		previousRune = r // Обновление предыдущего обработанного символа
 	}
 
 	if numberBuffer.Len() > 0 {

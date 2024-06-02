@@ -47,10 +47,10 @@ func Demon(url string, dead chan int, j int) {
 			RequestTaskBody := struct {
 				Id     int     `json:"id"`
 				Result float64 `json:"result"`
-			}{
-				Id:     task[jsonTask].Id,
-				Result: calculation(task[jsonTask]),
-			}
+				Err    error   `json:"error"`
+			}{}
+			RequestTaskBody.Id = task[jsonTask].Id
+			RequestTaskBody.Result, RequestTaskBody.Err = calculation(task[jsonTask])
 			log.Println("Машина", j, "Результат долгой операции:", RequestTaskBody.Result)
 			jsonBody, err := json.Marshal(RequestTaskBody)
 			// Отправляем её на сервер

@@ -2,6 +2,8 @@ package handle
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/katenester/Distributed_computing/internal/model"
 	"github.com/katenester/Distributed_computing/internal/orchestrator/ParseExpression"
@@ -85,13 +87,13 @@ func (h *handler) GetListExpressions(w http.ResponseWriter, r *http.Request, par
 	resp := struct {
 		Expressions []struct {
 			ID     int     `json:"id"`
-			Status bool    `json:"status"`
+			Status string  `json:"status"`
 			Result float64 `json:"result"`
 		} `json:"expressions"`
 	}{
 		Expressions: make([]struct {
 			ID     int     `json:"id"`
-			Status bool    `json:"status"`
+			Status string  `json:"status"`
 			Result float64 `json:"result"`
 		}, len(list)),
 	}
@@ -99,8 +101,14 @@ func (h *handler) GetListExpressions(w http.ResponseWriter, r *http.Request, par
 		var err error
 		resp.Expressions[i].Result, err = strconv.ParseFloat(v.Expr, 64)
 		resp.Expressions[i].ID = v.Id
-		// true - выражение посчитано, т.е. в стеке осталось одно число по алгоритму обратной польской записи, иначе false
-		resp.Expressions[i].Status = err == nil
+		// Решено, В процессе, Ошибка : деление на ноль
+		if v.Err != nil {
+			resp.Expressions[i].Status = "Ошибка : деление на ноль"
+		} else if err != nil {
+			resp.Expressions[i].Status = "В процессе"
+		} else {
+			resp.Expressions[i].Status = "Решено"
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(resp)
@@ -127,17 +135,24 @@ func (h *handler) GetExpression(w http.ResponseWriter, r *http.Request, params h
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-
 	res, err := strconv.ParseFloat(exp.Expr, 64)
+	var status string
+	if exp.Err != nil {
+		status = "Ошибка: деление на ноль"
+	} else if err != nil {
+		status = "В процессе"
+	} else {
+		status = "Решено"
+	}
 	// Декодируем в json
 	resp := map[string]struct {
 		ID     int     `json:"id"`
-		Status bool    `json:"status"`
+		Status string  `json:"status"`
 		Result float64 `json:"result"`
 	}{
 		"expression": {
 			ID:     exp.Id,
-			Status: err == nil,
+			Status: status,
 			Result: res,
 		},
 	}
@@ -176,8 +191,9 @@ func (h *handler) GiveTask(w http.ResponseWriter, r *http.Request, params httpro
 func (h *handler) GetResultTask(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// Получаем id и result
 	data := struct {
-		Id     int     `json:"id"`
-		Result float64 `json:"result"`
+		Id     int         `json:"id"`
+		Result float64     `json:"result"`
+		Err    interface{} `json:"error"`
 	}{}
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -185,8 +201,14 @@ func (h *handler) GetResultTask(w http.ResponseWriter, r *http.Request, params h
 		return
 	}
 	log.Println("Сервер: Получение результата вычисления от агента", data)
+	// Проверяем, не была ли ошибка в вычислениях(деление на 0)
+	if data.Err == nil {
+		err = nil
+	} else {
+		err = errors.New(fmt.Sprint(data.Err))
+	}
 	// Проверяем таску в хранилке , и если такая есть => меняем результат
-	if storage.FindAndReplace(data.Id, data.Result) {
+	if storage.FindAndReplace(data.Id, data.Result, err) {
 		w.WriteHeader(http.StatusCreated)
 		return
 	}
