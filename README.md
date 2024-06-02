@@ -93,6 +93,7 @@ curl --location 'http://localhost:8080/internal/task' \
       "expression": "2.5+2*(-2)"
 }
 ```
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Chema.png)
 
 ***Получить список выражений (GET)*** 
 
@@ -123,6 +124,8 @@ curl --location 'http://localhost:8080/internal/task' \
     "error":"Деление на ноль"
 }
 ```
+
+id задачи можно было получить из метода GET
 </details>
 
 ## Схема работы Backend
