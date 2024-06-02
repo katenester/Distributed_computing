@@ -80,16 +80,21 @@ curl --location 'http://localhost:8080/internal/task' \
 2. Скачать файл со всеми тестами, который покрывает разные сценарии: всё хорошо, ошибки
 **Файл [Postman](https://github.com/katenester/Distributed_computing/blob/main/docs/Testing%20arithmetic%20expressions.postman_collection.json)**
 Запросы тестировались через Postman
-***Добавить выражения (POST)*** `http://localhost:8080/api/v1/calculate` 
+***Добавить выражения (POST)***
+`http://localhost:8080/api/v1/calculate` 
 ```json
 {
       "expression": "2.5+2*(-2)"
 }
 ```
- ***Получить список выражений (GET)*** `http://localhost:8080/api/v1/expressions` 
- ***Получить выражение по его id *** `http://localhost:8080/api/v1/expressions/1717341632116157400` P/S/ id генерируется на сервере и возвращается в методе Добавить выражения (POST)
- ***Получить задачи для выполнения(GET)*** `http://localhost:8080/internal/task`  
- ***Прием результата обработки данных(POST)*** `http://localhost:8080/internal/task` 
+***Получить список выражений (GET)*** 
+`http://localhost:8080/api/v1/expressions` 
+***Получить выражение по его id ***
+`http://localhost:8080/api/v1/expressions/1717341632116157400` P/S/ id генерируется на сервере и возвращается в методе Добавить выражения (POST)
+***Получить задачи для выполнения(GET)*** 
+`http://localhost:8080/internal/task`  
+***Прием результата обработки данных(POST)*** 
+`http://localhost:8080/internal/task` 
 ```json
 {
     "id": 1717341915811790400,
