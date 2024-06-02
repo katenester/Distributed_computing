@@ -41,7 +41,75 @@
 
 ## Тестирование:
 <details><summary><b>Примеры использования с помощью curl</b></summary>
-</details>
-<details><summary><b>Postman</b></summary>
+Удобнее всего тестировать работу из Postman(пункт ниже), но также приведены описания примеры запросов через curl
 
+***Добавить выражения (POST)***
+
+```bash
+curl --location 'http://localhost:8080/api/v1/calculate' \
+--header 'Content-Type: application/json' \
+--data '{
+      "expression": "2.5+2*(-2)"
+}'
+```
+***Получить список выражений (GET)***
+```bash
+curl --location 'http://localhost:8080/api/v1/expressions'
+```
+***Получить выражение по его id (GET)***
+```bash
+curl --location 'http://localhost:8080/api/v1/expressions/1717341632116157400'
+```
+***Получить задачи для выполнения(GET)***
+```bash
+curl --location 'http://localhost:8080/internal/task'
+```
+***Прием результата обработки данных(POST)***
+```bash
+curl --location 'http://localhost:8080/internal/task' \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": 1717341915811790400,
+    "result": -8
+}'
+```
 </details>
+
+<details><summary><b>Postman</b></summary>
+1. Скачать программу Postman https://www.postman.com/downloads/  
+2. Скачать файл со всеми тестами, который покрывает разные сценарии: всё хорошо, ошибки
+**Файл [Postman](https://github.com/katenester/Distributed_computing/blob/main/docs/Testing%20arithmetic%20expressions.postman_collection.json)**
+Запросы тестировались через Postman
+- ***Добавить выражения (POST)*** `http://localhost:8080/api/v1/calculate` 
+```json
+{
+      "expression": "2.5+2*(-2)"
+}
+```
+- ***Получить список выражений (GET)**** `http://localhost:8080/api/v1/expressions` 
+- ***Получить выражение по его id **** `http://localhost:8080/api/v1/expressions/1717341632116157400` P/S/ id генерируется на сервере и возвращается в методе Добавить выражения (POST)
+- ***Получить задачи для выполнения(GET)**** `http://localhost:8080/internal/task`  
+- ***Прием результата обработки данных(POST)**** `http://localhost:8080/internal/task` 
+```json
+{
+    "id": 1717341915811790400,
+    "result": -8
+}
+```
+либо если ошибка деления на 0:
+```json
+{
+    "id": 1717337438507076300,
+    "result": 0,
+    "error":"Деление на ноль"
+}
+```
+</details>
+
+## Схема работы Backend
+<a name="схема-работы-backend"></a>
+![Схема Backend](https://github.com/katenester/Distributed_computing/blob/main/docs/Chema.png)
+P.S.
+Сервер принимает выражение, проверяет его на корректность, переводит в обратную польскую запись, составляет задачи для агента. Также он отдаёт все выражения или выражение по его id, которое выдается клиенту после добавления.
+Демон запускает агентов в горутинах. Агент все время приходит к оркестратору с запросом "дай задачку поработать" (в ручку GET internal/task для получения задач). Оркестратор отдаёт задачу.
+Агент производит вычисление и в ручку оркестратора (POST internal/task для приёма результатов обработки данных) отдаёт результат.
