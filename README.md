@@ -93,19 +93,25 @@ curl --location 'http://localhost:8080/internal/task' \
       "expression": "2.5+2*(-2)"
 }
 ```
-![](https://github.com/katenester/Distributed_computing/blob/main/docs/Chema.png)
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test1.png)
 
 ***Получить список выражений (GET)*** 
 
-`http://localhost:8080/api/v1/expressions` 
+`http://localhost:8080/api/v1/expressions`
+
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test2.png)
 
 ***Получить выражение по его id***
 
 `http://localhost:8080/api/v1/expressions/1717341632116157400` P/S/ id генерируется на сервере и возвращается в методе Добавить выражения (POST)
 
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test3.png)
+
 ***Получить задачи для выполнения(GET)*** 
 
 `http://localhost:8080/internal/task`  
+
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test4.png)
 
 ***Прием результата обработки данных(POST)*** 
 
@@ -124,8 +130,12 @@ curl --location 'http://localhost:8080/internal/task' \
     "error":"Деление на ноль"
 }
 ```
-
 id задачи можно было получить из метода GET
+
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test5.png)
+
+**Результаты вычислений**
+![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test2-2.png)
 </details>
 
 ## Схема работы Backend
