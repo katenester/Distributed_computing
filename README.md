@@ -34,7 +34,7 @@
 </details>
 
 ## Инструкция к запуску:
-1. Склонировать проект или скачать `git clone github.com/katenester/Distributed_computing`
+1. Склонировать проект или скачать `git clone https://github.com/katenester/Distributed_computing`
 2. Установить все зависимости из go.mod `go mod download` `go mod tidy`
 3. Переходим в папку с проектом на компьютере. `cd Distributed_computing`
 4. Открываем два терминала (win+R->cmd). В первом окне ввести ` go run cmd/orchestrator/main.go` . Во втором окне ввести `go run cmd/agent/main.go `. Должны запустится процессы и идти логи. Для отключения процессов Ctrl+s
