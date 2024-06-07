@@ -15,7 +15,7 @@ func Run() {
 	if err != nil || cpuCount <= 0 {
 		cpuCount = 4 // Используем значение по умолчанию, если переменная не задана или содержит некорректное значение
 	}
-	url := "http://localhost:8080/internal/task"
+	url := "http://orh:8080/internal/task"
 	// Чтобы прога не вылетала раньше времени
 	dead := make(chan int)
 	for i := 0; i < cpuCount; i++ {

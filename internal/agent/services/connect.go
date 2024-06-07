@@ -12,7 +12,7 @@ import (
 
 // Demon - тянет за ручку сервер
 func Demon(url string, dead chan int, j int) {
-	log.Println("Запуск", j, "вычислительной машины")
+	//log.Println("Запуск", j, "вычислительной машины")
 	for {
 		client := http.Client{
 			Timeout: 20 * time.Second,
@@ -22,7 +22,7 @@ func Demon(url string, dead chan int, j int) {
 		req, _ := http.NewRequest("GET", url, nil)
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Println("Машина", j, "Ошибка запроса get ответа:", err)
+			//log.Println("Машина", j, "Ошибка запроса get ответа:", err)
 			continue
 		}
 		// Получаем код ответа
@@ -32,14 +32,14 @@ func Demon(url string, dead chan int, j int) {
 			// Парсим таску
 			buf, err := io.ReadAll(resp.Body)
 			if err != nil {
-				log.Println("Машина", j, "Ошибка чтения :", err)
+				//	log.Println("Машина", j, "Ошибка чтения :", err)
 				continue
 			}
 			task := make(map[string]model.Task, 1)
 			jsonTask := "task"
 			err = json.Unmarshal(buf, &task)
 			if err != nil {
-				log.Println("Машина", j, "Ошибка чтения :", err)
+				//	log.Println("Машина", j, "Ошибка чтения :", err)
 				continue
 			}
 			log.Println("Машина", j, "Get ответ:", task[jsonTask])

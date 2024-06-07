@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  orh:
+    build: .
+    networks:
+      - calcNetworks
+    restart: always
+    environment:
+      TIME_ADDITION_MS: 1000
+      TIME_SUBTRACTION_MS: 1000
+      TIME_MULTIPLICATIONS_MS: 2000
+      TIME_DIVISIONS_MS: 2000
+    ports:
+      - "8080:8080"
+    command: [ "go", "run", "./cmd/orchestrator/main.go" ]
+
+  agent:
+    build: .
+    networks:
+      - calcNetworks
+    restart: always
+    environment:
+      COMPUTING_POWER: 5
+      TIME_ADDITION_MS: 1000
+      TIME_SUBTRACTION_MS: 1000
+      TIME_MULTIPLICATIONS_MS: 2000
+      TIME_DIVISIONS_MS: 2000
+    depends_on:
+      - orh
+    command: [ "go", "run", "./cmd/agent/main.go" ]
+networks:
+  calcNetworks:
+    driver: bridge
