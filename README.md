@@ -35,9 +35,7 @@
 
 ## Инструкция к запуску:
 1. Склонировать проект или скачать `git clone https://github.com/katenester/Distributed_computing`
-2. Установить все зависимости из go.mod `go mod download` `go mod tidy`
-3. Переходим в папку с проектом на компьютере. `cd Distributed_computing`
-4. Открываем два терминала (win+R->cmd). В первом окне ввести ` go run cmd/orchestrator/main.go` . Во втором окне ввести `go run cmd/agent/main.go `. Должны запустится процессы и идти логи. Для отключения процессов Ctrl+s
+2. В корневой директории `docker-compose up` либо `make run`
 
 ## Тестирование:
 <details><summary><b>Примеры использования с помощью curl</b></summary>
@@ -59,19 +57,6 @@ curl --location 'http://localhost:8080/api/v1/expressions'
 ***Получить выражение по его id (GET)***
 ```bash
 curl --location 'http://localhost:8080/api/v1/expressions/1717341632116157400'
-```
-***Получить задачи для выполнения(GET)***
-```bash
-curl --location 'http://localhost:8080/internal/task'
-```
-***Прием результата обработки данных(POST)***
-```bash
-curl --location 'http://localhost:8080/internal/task' \
---header 'Content-Type: application/json' \
---data '{
-    "id": 1717341915811790400,
-    "result": -8
-}'
 ```
 </details>
 
@@ -107,29 +92,7 @@ curl --location 'http://localhost:8080/internal/task' \
 
 ![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test3.png)
 
-***Получить задачи для выполнения(GET)*** 
 
-`http://localhost:8080/internal/task`  
-
-![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test4.png)
-
-***Прием результата обработки данных(POST)*** 
-
-`http://localhost:8080/internal/task` 
-```json
-{
-    "id": 1717341915811790400,
-    "result": -8
-}
-```
-либо если ошибка деления на 0:
-```json
-{
-    "id": 1717337438507076300,
-    "result": 0,
-    "error":"Деление на ноль"
-}
-```
 id задачи можно было получить из метода GET
 
 ![](https://github.com/katenester/Distributed_computing/blob/main/docs/Postman%20image/Test5.png)
@@ -143,5 +106,5 @@ id задачи можно было получить из метода GET
 ![Схема Backend](https://github.com/katenester/Distributed_computing/blob/main/docs/Chema.png)
 P.S.
 Сервер принимает выражение, проверяет его на корректность, переводит в обратную польскую запись, составляет задачи для агента. Также он отдаёт все выражения или выражение по его id, которое выдается клиенту после добавления.
-Демон запускает агентов в горутинах. Агент все время приходит к оркестратору с запросом "дай задачку поработать" (в ручку GET internal/task для получения задач). Оркестратор отдаёт задачу.
-Агент производит вычисление и в ручку оркестратора (POST internal/task для приёма результатов обработки данных) отдаёт результат.
+Демон запускает агентов в горутинах. Агент все время приходит к оркестратору с запросом по gRPC "дай задачку поработать" (в ручку GiveTask для получения задач). Оркестратор отдаёт задачу.
+Агент производит вычисление и в ручку оркестратора (GetResult для приёма результатов обработки данных) отдаёт результат.
