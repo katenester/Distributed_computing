@@ -1,44 +1,13 @@
-package handle
+package transport
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
-	"github.com/katenester/Distributed_computing/internal/model"
 	"github.com/katenester/Distributed_computing/internal/orchestrator/ParseExpression"
 	"log"
 	"net/http"
 	"strconv"
 )
-
-type Handler interface {
-	Register(router *httprouter.Router)
-}
-type handler struct {
-}
-
-func NewHandler() Handler {
-	return &handler{}
-}
-
-const (
-	addExpressionURL = "/api/v1/calculate"
-	expressions      = "/api/v1/expressions"
-	expression       = "/api/v1/expressions/:id"
-	// Общение с агентом
-	task = "/internal/task"
-)
-
-// Register - регистрация обработчиков handler
-func (h *handler) Register(router *httprouter.Router) {
-	// регистрируем пути
-	router.POST(addExpressionURL, h.AddExpression)
-	router.GET(expressions, h.GetListExpressions)
-	router.GET(expression, h.GetExpression)
-	router.GET(task, h.GiveTask)
-	router.POST(task, h.GetResultTask)
-}
 
 // AddExpression - добавление выражения
 func (h *handler) AddExpression(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -163,54 +132,4 @@ func (h *handler) GetExpression(w http.ResponseWriter, r *http.Request, params h
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-
-}
-
-// GiveTask - Передача задачи агенту
-func (h *handler) GiveTask(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	// Ищем задачу для агента
-	if task, isTask := storage.FindTask(); isTask {
-		resp := map[string]model.Task{
-			"task": task,
-		}
-		log.Println("Сервер: Передаю задачу агенту", resp)
-		w.Header().Set("Content-Type", "application/json")
-		err := json.NewEncoder(w).Encode(resp)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusCreated)
-		return
-	}
-	// Задачи нет
-	w.WriteHeader(http.StatusNotFound)
-}
-
-// GetResultTask - Получение результата вычисления от агента
-func (h *handler) GetResultTask(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	// Получаем id и result
-	data := struct {
-		Id     int         `json:"id"`
-		Result float64     `json:"result"`
-		Err    interface{} `json:"error"`
-	}{}
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		return
-	}
-	log.Println("Сервер: Получение результата вычисления от агента", data)
-	// Проверяем, не была ли ошибка в вычислениях(деление на 0)
-	if data.Err == nil {
-		err = nil
-	} else {
-		err = errors.New(fmt.Sprint(data.Err))
-	}
-	// Проверяем таску в хранилке , и если такая есть => меняем результат
-	if storage.FindAndReplace(data.Id, data.Result, err) {
-		w.WriteHeader(http.StatusCreated)
-		return
-	}
-	w.WriteHeader(http.StatusNotFound)
 }

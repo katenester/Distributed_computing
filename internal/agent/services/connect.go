@@ -1,69 +1,86 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"github.com/katenester/Distributed_computing/internal/model"
-	"io"
+	proto "github.com/katenester/Distributed_computing/pkg/api"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"log"
-	"net/http"
 	"time"
 )
 
 // Demon - тянет за ручку сервер
-func Demon(url string, dead chan int, j int) {
-	//log.Println("Запуск", j, "вычислительной машины")
+func Demon() {
 	for {
-		client := http.Client{
-			Timeout: 20 * time.Second,
-		}
-		log.Println("Машина", j, "Отправка get запроса ")
-		// Отправляем запрос с контекстом
-		req, _ := http.NewRequest("GET", url, nil)
-		resp, err := client.Do(req)
-		if err != nil {
-			//log.Println("Машина", j, "Ошибка запроса get ответа:", err)
+		log.Println("Дергает агент функцию")
+		resp, err := MakeRequestGiveTask()
+		log.Println("Получаем", resp)
+		// Если задача для вычисления не найдена => скип
+		if status.Code(err) == codes.NotFound {
 			continue
 		}
-		// Получаем код ответа
-		statusCode := resp.StatusCode
-		log.Println("Машина", j, "Статус get ответа:", statusCode)
-		if statusCode == 200 {
-			// Парсим таску
-			buf, err := io.ReadAll(resp.Body)
-			if err != nil {
-				//	log.Println("Машина", j, "Ошибка чтения :", err)
-				continue
-			}
-			task := make(map[string]model.Task, 1)
-			jsonTask := "task"
-			err = json.Unmarshal(buf, &task)
-			if err != nil {
-				//	log.Println("Машина", j, "Ошибка чтения :", err)
-				continue
-			}
-			log.Println("Машина", j, "Get ответ:", task[jsonTask])
-			// Вычисляем
-			RequestTaskBody := struct {
-				Id     int     `json:"id"`
-				Result float64 `json:"result"`
-				Err    error   `json:"error"`
-			}{}
-			RequestTaskBody.Id = task[jsonTask].Id
-			RequestTaskBody.Result, RequestTaskBody.Err = calculation(task[jsonTask])
-			log.Println("Машина", j, "Результат долгой операции:", RequestTaskBody.Result)
-			jsonBody, err := json.Marshal(RequestTaskBody)
-			// Отправляем её на сервер
-			log.Println("Машина", j, "Отправка POST ответа:", RequestTaskBody)
-			log.Println("Машина", j, "Отправка POST ответа:", jsonBody)
-			req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-			req.Header.Set("Content-Type", "application/json")
-			resp, err = client.Do(req)
-			// Получаем код ответа
-			statusCode := resp.StatusCode
-			log.Println("Машина", j, "Статус post ответа:", statusCode)
+		if err != nil {
+			log.Printf("error grpc client GiveTask %s", err.Error())
+			continue
+		}
+		// Если задача найдена
+		task := model.Task{
+			Id:         resp.Id,
+			Arg1:       float64(resp.X),
+			Arg2:       float64(resp.Y),
+			Operation:  resp.Operator,
+			LastAccess: time.Unix(resp.LastAccess.Seconds, int64(resp.LastAccess.Nanos)),
+		}
+		log.Println("Конвертируем resopnse", task)
+		result, err := calculation(task)
+		_, err = MakeRequestGetResult(task.Id, result, err)
+		if err != nil {
+			log.Printf("error grpc client GetResult %s", err.Error())
 			continue
 		}
 	}
-	dead <- 1
+}
+
+func MakeRequestGiveTask() (*proto.TaskResponse, error) {
+	conn, err := grpc.Dial("orh"+viper.GetString("grpc_port"), grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	client := proto.NewGenerateTaskClient(conn)
+	return client.GiveTask(ctx, &emptypb.Empty{})
+}
+
+func MakeRequestGetResult(idTask int32, result float64, errResult error) (*emptypb.Empty, error) {
+	conn, err := grpc.Dial("orh"+viper.GetString("grpc_port"), grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	client := proto.NewGenerateTaskClient(conn)
+	var resultProto *proto.ResultRequest
+	if errResult != nil {
+		resultProto = &proto.ResultRequest{
+			Id: int32(idTask),
+			Details: &proto.ResultRequest_Error{ // Устанавливаем поле error
+				Error: errResult.Error(),
+			},
+		}
+	} else {
+		resultProto = &proto.ResultRequest{
+			Id: int32(idTask),
+			Details: &proto.ResultRequest_Result{ // Устанавливаем поле error
+				Result: float32(result),
+			},
+		}
+	}
+	return client.GetResult(ctx, resultProto)
 }

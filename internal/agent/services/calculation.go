@@ -9,7 +9,7 @@ import (
 
 // Вычисляет выражение "долго"
 func calculation(task model.Task) (float64, error) {
-	switch string(task.Operation) {
+	switch task.Operation {
 	case "+":
 		time.Sleep(config.TIME_ADDITION_MS)
 		return task.Arg1 + task.Arg2, nil
@@ -22,7 +22,7 @@ func calculation(task model.Task) (float64, error) {
 	case "/":
 		time.Sleep(config.TIME_DIVISIONS_MS)
 		if task.Arg2 == 0 {
-			return 0, errors.New("Деление на ноль")
+			return 0, errors.New("division by zero")
 		}
 		return task.Arg1 / task.Arg2, nil
 	}

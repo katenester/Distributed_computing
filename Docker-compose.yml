@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   orh:
     build: .
@@ -10,8 +11,11 @@ services:
       TIME_SUBTRACTION_MS: 1000
       TIME_MULTIPLICATIONS_MS: 2000
       TIME_DIVISIONS_MS: 2000
+    volumes:
+     - ./configs:/go/configs   # Монтирование локальной директории configs
     ports:
-      - "8080:8080"
+      - "8081:8081"   # Публикуем HTTP сервер на 8081 порту
+      - "8082:8082"   # Публикуем gRPC сервер на 8082 порту
     command: [ "go", "run", "./cmd/orchestrator/main.go" ]
 
   agent:

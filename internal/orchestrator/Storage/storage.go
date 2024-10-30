@@ -51,7 +51,7 @@ func (s *Storage) GetAllExpression() []Expression {
 }
 
 // FindAndReplace - делает замены решенных подзадач
-func (s *Storage) FindAndReplace(id int, result float64, err error) bool {
+func (s *Storage) FindAndReplace(id int32, result float64, err error) bool {
 	for i := 0; i < len(s.expressions); i++ {
 		if s.expressions[i].IsNotSolved() && s.expressions[i].FindAndReplace(id, result, err) {
 			return true

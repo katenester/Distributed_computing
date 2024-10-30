@@ -22,8 +22,9 @@ type Expression struct {
 }
 
 // FindAndReplace - нахождение таски и её замена
-func (e *Expression) FindAndReplace(idTask int, result float64, err error) bool {
+func (e *Expression) FindAndReplace(idTask int32, result float64, err error) bool {
 	log.Println("До замены", e.Expr)
+	log.Println("Таски", e.Tasks)
 	// Ищем таску
 	for i := 0; i < len(e.Tasks); i++ {
 		// Если нашли нужную таску => делаем замену
@@ -37,9 +38,11 @@ func (e *Expression) FindAndReplace(idTask int, result float64, err error) bool 
 			// Удаляем текущую таску
 			e.Tasks[i], e.Tasks[len(e.Tasks)-1] = e.Tasks[len(e.Tasks)-1], e.Tasks[i]
 			e.Tasks = e.Tasks[:len(e.Tasks)-1]
+			log.Println("После замены", e.Expr)
 			return true
 		}
 	}
+	log.Println("Замена ноу")
 	return false
 }
 
@@ -63,7 +66,7 @@ func (e *Expression) replace(i int, result float64) {
 				// Если нужная комбинация
 				if err1 == nil && err2 == nil && err3 {
 					// Создаем, если возможно нужную таску
-					id := int(time.Now().UnixNano())
+					id := int32(time.Now().UnixNano())
 					e.Tasks = append(e.Tasks, model.Task{Id: id, Arg1: a, Arg2: b, Operation: s[j-1]})
 				}
 			}
@@ -75,7 +78,7 @@ func (e *Expression) replace(i int, result float64) {
 				// Если нужная комбинация
 				if err1 == nil && err2 == nil && err3 {
 					// Создаем, если возможно нужную таску
-					id := int(time.Now().UnixNano())
+					id := int32(time.Now().UnixNano())
 					e.Tasks = append(e.Tasks, model.Task{Id: id, Arg1: a, Arg2: b, Operation: s[j]})
 				}
 			}
@@ -96,7 +99,7 @@ func (e *Expression) GenerateTask() {
 		a, err2 := strconv.ParseFloat(s[i-2], 64)
 		b, err1 := strconv.ParseFloat(s[i-1], 64)
 		if err1 == nil && err2 == nil && (s[i] == "+" || s[i] == "-" || s[i] == "*" || s[i] == "/") {
-			id := int(time.Now().UnixNano())
+			id := int32(time.Now().UnixNano())
 
 			e.Tasks = append(e.Tasks, model.Task{Id: id, Arg1: a, Arg2: b, Operation: s[i]})
 		}

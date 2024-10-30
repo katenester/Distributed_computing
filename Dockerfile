@@ -3,7 +3,6 @@ FROM golang:latest
 RUN go version
 ENV GOPATH=/
 
-COPY ./ ./
-RUN go mod download
-
-EXPOSE 8080
+COPY go.mod go.sum ./
+RUN go mod tidy && go mod download
+COPY . .

@@ -1,4 +1,4 @@
-package handle
+package transport
 
 import "github.com/katenester/Distributed_computing/internal/orchestrator/Storage"
 

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 func Run() {
@@ -13,14 +14,13 @@ func Run() {
 	// Получаем значение переменной среды COMPUTING_POWER
 	cpuCount, err := strconv.Atoi(os.Getenv("COMPUTING_POWER"))
 	if err != nil || cpuCount <= 0 {
-		cpuCount = 4 // Используем значение по умолчанию, если переменная не задана или содержит некорректное значение
+		cpuCount = 3 // Используем значение по умолчанию, если переменная не задана или содержит некорректное значение
 	}
-	url := "http://orh:8080/internal/task"
-	// Чтобы прога не вылетала раньше времени
-	dead := make(chan int)
+	wg := sync.WaitGroup{}
+	wg.Add(cpuCount)
 	for i := 0; i < cpuCount; i++ {
 		// Запускаем вычислительные машины в горутинах
-		go services.Demon(url, dead, i)
+		go services.Demon()
 	}
-	<-dead
+	wg.Wait()
 }
